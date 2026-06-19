@@ -163,8 +163,8 @@ function buildNoteIndex(channels: Channel[]): Map<number, { ch: Channel; note: N
 }
 
 function tickInterval(): Tone.Unit.Time {
-  // 1/8 of a quarter note = '4n / 8'  (Tone parses this)
-  return `4n / ${TICKS_PER_BEAT}` as Tone.Unit.Time;
+  // 1 tick = 1/8 of a beat = 1/32 note duration
+  return '32n';
 }
 
 export function startSequencer(ticks: number, onTick: (tick: number) => void) {

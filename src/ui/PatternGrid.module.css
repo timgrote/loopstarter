@@ -1,117 +1,152 @@
+
+.gridWrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  min-height: 2rem;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
 .grid {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
 }
 
-.ruler {
+/* ── Ruler ──────────────────────────────────────────────────── */
+.rulerRow {
   display: flex;
-  gap: 2px;
-  height: 1rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .rulerCell {
-  min-width: 1.125rem;
-  width: 1.125rem;
-  flex-shrink: 0;
-  font-size: 0.5rem;
+  font-size: 0.625rem;
   font-family: var(--font-mono);
   color: var(--text-dim);
   text-align: center;
-  line-height: 1rem;
+  line-height: 1.125rem;
+  border-left: 1px solid transparent;
+  white-space: nowrap;
+  user-select: none;
 }
 
-.rulerCell.rulerBar {
+.rulerBar {
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
+  border-left: 1px solid var(--border);
 }
 
-.steps {
+/* ── Tick row ──────────────────────────────────────────────── */
+.tickRow {
   display: flex;
-  gap: 2px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.cell {
-  min-width: 1.125rem;
-  width: 1.125rem;
-  height: 1.75rem;
-  background: var(--surface-2);
-  border-radius: 2px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.08s;
+  height: 1.875rem;
+  position: relative;
   flex-shrink: 0;
 }
 
-.cell:hover {
-  background: color-mix(in srgb, var(--border) 70%, white);
+.tick {
+  height: 100%;
+  border-right: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+  cursor: cell;
 }
 
-.cell.active {
+.tickBar {
+  border-right: 1px solid var(--border);
+}
+
+.tickBeat {
+  border-right: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.tickPlayhead {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.tick:hover {
+  background: color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+/* ── Note blocks ────────────────────────────────────────────── */
+.noteBlock {
+  height: 100%;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: box-shadow 0.1s;
+}
+
+.noteBlock:hover {
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
+  z-index: 2;
+}
+
+.noteBlock:active {
+  cursor: grabbing;
+}
+
+.noteActive {
   background: var(--accent);
-}
-
-/* Bar start — thick left border with color */
-.cell.barStart {
-  border-left: 2px solid var(--border);
-  margin-left: 2px;
-}
-
-/* Beat start — subtle left line */
-.cell.beat {
-  border-left: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-}
-
-.cell.current {
-  background: color-mix(in srgb, var(--border) 50%, white);
-}
-
-.cell.active.current {
-  background: color-mix(in srgb, var(--accent) 70%, white);
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 50%);
 }
 
 .noteLabel {
-  font-size: 0.5rem;
+  font-size: 0.625rem;
   font-family: var(--font-mono);
   color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
   pointer-events: none;
   user-select: none;
+  letter-spacing: 0.02em;
 }
 
-.fillZone {
-  min-width: 2rem;
-  flex-grow: 1;
-  height: 1.75rem;
-  cursor: context-menu;
-  border-radius: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.6875rem;
-  color: var(--text-dim);
-  transition: background 0.1s;
+.resizeHandle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 100%);
+  border-radius: 0 3px 3px 0;
 }
 
-.fillZone::after {
-  content: '+';
-  opacity: 0.4;
+.resizeHandle:hover {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 100%);
 }
 
-.fillZone:hover {
-  background: var(--surface-2);
+/* ── Playhead ───────────────────────────────────────────────── */
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 4px var(--accent);
 }
 
-.fillZone:hover::after {
-  opacity: 0.8;
+/* ── Drag preview ───────────────────────────────────────────── */
+.dragPreview {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border: 1px dashed var(--accent);
+  border-radius: 3px;
+  pointer-events: none;
 }
 
-.rulerFillZone {
-  min-width: 2rem;
-  flex-grow: 1;
+.dragPreviewLayer {
+  pointer-events: none;
 }

@@ -1,109 +1,128 @@
 
 import { getScaleNotes, randomFromScale } from './scales';
 import { type Preset } from './presets';
+import { TICKS_PER_BEAT, type Note } from '../state/store';
 
 export type ChannelType = 'kick' | 'snare' | 'hat' | 'bass' | 'melody' | 'arp';
 
-export function generateDrumPattern(
-  type: 'kick' | 'snare' | 'hat',
-  steps: number,
-  density: number,
-): (string | null)[] {
-  const pattern: (string | null)[] = [];
-
-  for (let i = 0; i < steps; i++) {
-    const beatPosition = i % 16;
-    let hit = false;
-
-    if (type === 'kick') {
-      // Prefer downbeats
-      if (beatPosition === 0 || beatPosition === 8) hit = Math.random() < 0.9;
-      else if (beatPosition % 4 === 0) hit = Math.random() < density * 0.7;
-      else hit = Math.random() < density * 0.3;
-    } else if (type === 'snare') {
-      // Prefer beats 2 and 4 (positions 4 and 12 in 16th notes)
-      if (beatPosition === 4 || beatPosition === 12) hit = Math.random() < 0.85;
-      else hit = Math.random() < density * 0.15;
-    } else if (type === 'hat') {
-      // Prefer off-beats
-      if (beatPosition % 4 === 2) hit = Math.random() < density * 0.8;
-      else if (beatPosition % 2 === 1) hit = Math.random() < density * 0.5;
-      else hit = Math.random() < density * 0.2;
-    }
-
-    pattern.push(hit ? 'x' : null);
-  }
-
-  return pattern;
+function nid(): string {
+  return Math.random().toString(36).slice(2, 10);
 }
 
-export function generateBassPattern(
-  preset: Preset,
-  steps: number,
-): (string | null)[] {
-  const scaleNotes = getScaleNotes(preset.root, preset.scale, preset.bassOctave, 1);
-  const pattern: (string | null)[] = [];
-  let lastNote = scaleNotes[0];
 
-  for (let i = 0; i < steps; i++) {
-    const beatPosition = i % 16;
-    // Bass hits on strong beats with occasional off-beats
-    const shouldHit = beatPosition % 4 === 0
-      ? Math.random() < 0.8
-      : beatPosition % 2 === 0
-        ? Math.random() < 0.3
-        : Math.random() < 0.05;
+export function generateDrumPattern(
+  type: 'kick' | 'snare' | 'hat',
+  ticks: number,
+  density: number,
+): Note[] {
+  const notes: Note[] = [];
+  const beatTicks = TICKS_PER_BEAT; // 4th of a bar position = one quarter note = 1 beat
 
-    if (shouldHit) {
-      // Prefer repeating the last note or moving by a step
-      if (Math.random() < 0.6) {
-        pattern.push(lastNote);
+  for (let t = 0; t < ticks; t++) {
+    const beatPos = Math.floor(t / beatTicks); // which beat within the bar (0-3 repeating)
+    const beatFrac = (t % beatTicks) / beatTicks;
+    
+    // Only generate at the start of each position we care about
+    // Drums: quarter-note resolution for kick/snare, 8th-note for hat
+    if (type === 'kick' || type === 'snare') {
+      if (beatFrac !== 0) continue;
+      const bp = beatPos % 4;
+      let hit = false;
+      if (type === 'kick') {
+        if (bp === 0 || bp === 2) hit = Math.random() < 0.85;
+        else hit = Math.random() < density * 0.2;
       } else {
-        lastNote = randomFromScale(scaleNotes);
-        pattern.push(lastNote);
+        if (bp === 1 || bp === 3) hit = Math.random() < 0.85;
+        else hit = Math.random() < density * 0.1;
       }
+      if (hit) notes.push({ id: nid(), note: 'x', start: t, duration: 2 }); // 2 ticks = 1/4 beat
     } else {
-      pattern.push(null);
+      // Hat: 8th-note resolution (every 4 ticks)
+      if (t % Math.floor(beatTicks / 2) !== 0) continue;
+      const bp = beatPos % 4;
+      const subBeat = Math.floor((t % beatTicks) / Math.floor(beatTicks / 2));
+      let hit = false;
+      if (subBeat === 1) hit = Math.random() < density * 0.8;
+      else if (bp % 2 === 0 && subBeat === 0) hit = Math.random() < density * 0.6;
+      else hit = Math.random() < density * 0.2;
+      if (hit) notes.push({ id: nid(), note: 'x', start: t, duration: 2 });
     }
   }
 
-  return pattern;
+  return notes;
+}
+
+export function generateBassPattern(preset: Preset, ticks: number): Note[] {
+  const scaleNotes = getScaleNotes(preset.root, preset.scale, preset.bassOctave, 1);
+  const notes: Note[] = [];
+  let lastNote = scaleNotes[0];
+  const beatTicks = TICKS_PER_BEAT;
+
+  for (let t = 0; t < ticks; t += beatTicks) {
+    const bp = Math.floor(t / beatTicks) % 4;
+    // Bass: mostly quarter notes, some eighth notes
+    const shouldHit = bp % 2 === 0
+      ? Math.random() < 0.8
+      : Math.random() < 0.25;
+
+    if (shouldHit) {
+      // Vary duration: 1 beat (75%) or 2 beats (25%)
+      const dur = Math.random() < 0.75 ? beatTicks : beatTicks * 2;
+      const clampedDur = Math.min(dur, ticks - t);
+      notes.push({ id: nid(), note: lastNote, start: t, duration: clampedDur });
+
+      // 40% chance to pick a new note for the next hit
+      if (Math.random() < 0.4) {
+        lastNote = randomFromScale(scaleNotes);
+      }
+    }
+  }
+
+  return notes;
 }
 
 export function generateMelodyPattern(
   preset: Preset,
-  steps: number,
-): (string | null)[] {
+  ticks: number,
+): Note[] {
   const scaleNotes = getScaleNotes(preset.root, preset.scale, preset.melodyOctave, 2);
-  const pattern: (string | null)[] = [];
+  const notes: Note[] = [];
+  const halfBeat = Math.floor(TICKS_PER_BEAT / 2);
 
-  for (let i = 0; i < steps; i++) {
-    // Melody is sparse — about 30% fill
-    const shouldHit = Math.random() < 0.3;
-    if (shouldHit) {
-      pattern.push(randomFromScale(scaleNotes));
-    } else {
-      pattern.push(null);
+  for (let t = 0; t < ticks; t += halfBeat) {
+    if (Math.random() < 0.2) {
+      // Mix of durations: 1/2 beat, 1 beat, or 2 beats
+      const choices = [halfBeat, TICKS_PER_BEAT, TICKS_PER_BEAT * 2];
+      const weights = [0.4, 0.4, 0.2];
+      const r = Math.random();
+      let picked = choices[0];
+      let acc = 0;
+      for (let i = 0; i < weights.length; i++) {
+        acc += weights[i];
+        if (r < acc) { picked = choices[i]; break; }
+      }
+      const clampedDur = Math.min(picked, ticks - t);
+      notes.push({
+        id: nid(),
+        note: randomFromScale(scaleNotes),
+        start: t,
+        duration: clampedDur,
+      });
     }
   }
 
-  return pattern;
+  return notes;
 }
 
 export function generateChannelPattern(
   type: ChannelType,
   preset: Preset,
-  steps: number,
-): (string | null)[] {
+  ticks: number,
+): Note[] {
   if (type === 'kick' || type === 'snare' || type === 'hat') {
-    const density = preset.drumDensity[type];
-    return generateDrumPattern(type, steps, density);
+    return generateDrumPattern(type, ticks, preset.drumDensity[type]);
   }
-  if (type === 'bass') {
-    return generateBassPattern(preset, steps);
-  }
-  if (type === 'melody' || type === 'arp') {
-    return generateMelodyPattern(preset, steps);
-  }
-  return Array(steps).fill(null);
+  if (type === 'bass') return generateBassPattern(preset, ticks);
+  if (type === 'melody' || type === 'arp') return generateMelodyPattern(preset, ticks);
+  return [];
 }

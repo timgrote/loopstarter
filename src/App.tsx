@@ -1,17 +1,17 @@
+
 import { useEffect } from 'react';
-import { useStore } from './state/store';
+import { useStore, TICKS_PER_BEAT } from './state/store';
 import { Transport } from './ui/Transport';
 import { ChannelStrip } from './ui/ChannelStrip';
 import { ContextMenu } from './ui/ContextMenu';
-import { FillMenu } from './ui/FillMenu';
 import * as engine from './audio/engine';
 import styles from './App.module.css';
 
 function App() {
   const channels = useStore((s) => s.channels);
-  const currentStep = useStore((s) => s.currentStep);
+  const currentTick = useStore((s) => s.currentTick);
   const loopBars = useStore((s) => s.loopBars);
-  const totalSteps = loopBars * 16;
+  const totalTicks = loopBars * 16 * TICKS_PER_BEAT;
 
   useEffect(() => {
     return () => {
@@ -39,8 +39,9 @@ function App() {
         for (const ch of chs) {
           engine.registerChannel(ch);
         }
-        engine.startSequencer(state.loopBars * 16, (step) => {
-          state.setCurrentStep(step);
+        const tt = state.loopBars * 16 * TICKS_PER_BEAT;
+        engine.startSequencer(tt, (tick) => {
+          state.setCurrentTick(tick);
         });
         state.setIsPlaying(true);
       }
@@ -58,21 +59,19 @@ function App() {
           <ChannelStrip
             key={channel.id}
             channel={channel}
-            totalSteps={totalSteps}
-            currentStep={currentStep}
+            totalTicks={totalTicks}
+            currentTick={currentTick}
           />
         ))}
       </main>
 
       <footer className={styles.footer}>
-        <p>Click ● on a channel to select it for live MIDI playback</p>
-        <p>When selected, press REC to record your MIDI input into the pattern</p>
-        <p>Right-click a channel name to change its sound variant · Right-click the + zone to fill or clear the pattern</p>
-        <p>Spacebar to play / pause · Click the key or 🎲 to change it</p>
+        <p>Click and drag on the grid to create notes · Drag edges to resize · Double-click or right-click to delete</p>
+        <p>Click ● on a channel to select it for live MIDI playback · REC to record MIDI input</p>
+        <p>Spacebar to play / pause · 🎲 to randomize key</p>
       </footer>
 
       <ContextMenu />
-      <FillMenu />
     </div>
   );
 }

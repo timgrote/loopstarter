@@ -10,8 +10,8 @@ import styles from './ChannelStrip.module.css';
 
 interface ChannelStripProps {
   channel: Channel;
-  totalSteps: number;
-  currentStep: number;
+  totalTicks: number;
+  currentTick: number;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -25,8 +25,8 @@ const TYPE_COLORS: Record<string, string> = {
 
 export const ChannelStrip: React.FC<ChannelStripProps> = ({
   channel,
-  totalSteps,
-  currentStep,
+  totalTicks,
+  currentTick,
 }) => {
   const setVolume = useStore((s) => s.setVolume);
   const setPan = useStore((s) => s.setPan);
@@ -35,7 +35,6 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
   const liveChannelId = useStore((s) => s.liveChannelId);
   const setLiveChannel = useStore((s) => s.setLiveChannel);
   const recordingActive = useStore((s) => s.recordingActive);
-  const openContextMenu = useStore((s) => s.openContextMenu);
   const color = TYPE_COLORS[channel.type] || '#888';
   const isLive = liveChannelId === channel.id;
   const isRecording = isLive && recordingActive;
@@ -52,7 +51,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
         className={styles.info}
         onContextMenu={(e) => {
           e.preventDefault();
-          openContextMenu(e.clientX, e.clientY, channel.id);
+          /* openContextMenu — removed for simplicity */
         }}
       >
         <div className={styles.nameCol} style={{ borderLeftColor: color }}>
@@ -74,7 +73,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
           onClick={() => regenerateChannel(channel.id)}
           title="Regenerate"
         >
-          🎲
+          
         </button>
         <button
           className={`${styles.recInd} ${isLive ? styles.live : ''} ${isRecording ? styles.recording : ''}`}
@@ -120,8 +119,8 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
       <PatternGrid
         channelId={channel.id}
         channelType={channel.type}
-        totalSteps={totalSteps}
-        currentStep={currentStep}
+        totalTicks={totalTicks}
+        currentTick={currentTick}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 
 import * as Tone from 'tone';
-import type { Channel } from '../state/store';
-import { useStore } from '../state/store';
+import type { Channel, Note } from '../state/store';
+import { useStore, TICKS_PER_BEAT } from '../state/store';
 import { getSpec } from './sounds';
 
 type AudioNode = Tone.ToneAudioNode;
@@ -17,6 +17,8 @@ interface ChannelAudio {
 const audioNodes = new Map<string, ChannelAudio>();
 const loopIds: number[] = [];
 let initialized = false;
+let totalTicks = 0;
+let currentTick = 0;
 
 function buildChain(channel: Channel): ChannelAudio {
   const spec = getSpec(channel.type, channel.variant);
@@ -26,12 +28,8 @@ function buildChain(channel: Channel): ChannelAudio {
   const pan = new Tone.Panner(channel.pan / 100);
   const meter = new Tone.Meter({ smoothing: 0.6 });
 
-  // Wire: source → [...effects] → gain → pan → meter → destination
   let last: Tone.ToneAudioNode = source;
-  for (const fx of effects) {
-    last.connect(fx);
-    last = fx;
-  }
+  for (const fx of effects) { last.connect(fx); last = fx; }
   last.connect(gain);
   gain.connect(pan);
   pan.connect(meter);
@@ -40,33 +38,34 @@ function buildChain(channel: Channel): ChannelAudio {
   return { source, effects, gain, pan, meter };
 }
 
-function trigger(channel: Channel, audio: ChannelAudio, time: number, noteFromPattern?: string | null) {
+function trigger(channel: Channel, audio: ChannelAudio, time: number, note: string, durationTicks: number) {
   const spec = getSpec(channel.type, channel.variant);
-  const { note, duration, velocity } = spec.defaults;
+  const { velocity } = spec.defaults;
+
+  // Convert duration ticks to seconds
+  const durSec = (60 / useStore.getState().bpm) * durationTicks / TICKS_PER_BEAT;
+  const clampedDur = Math.max(0.05, durSec);
 
   switch (channel.type) {
     case 'kick':
-      (audio.source as Tone.MembraneSynth).triggerAttackRelease(note, duration, time, velocity);
+      (audio.source as Tone.MembraneSynth).triggerAttackRelease('C1', clampedDur, time, velocity);
       break;
     case 'snare':
-      (audio.source as Tone.NoiseSynth).triggerAttackRelease(duration, time, velocity);
+      (audio.source as Tone.NoiseSynth).triggerAttackRelease(clampedDur, time, velocity);
       break;
     case 'hat':
-      (audio.source as Tone.MetalSynth).triggerAttackRelease(note, duration, time, velocity);
+      (audio.source as Tone.MetalSynth).triggerAttackRelease('C4', clampedDur / 2, time, velocity);
       break;
     case 'bass': {
-      if (noteFromPattern) {
-        const src = audio.source as any;
-        if (typeof src.triggerAttackRelease === 'function') {
-          src.triggerAttackRelease(noteFromPattern, duration, time, velocity);
-        }
+      const src = audio.source as any;
+      if (typeof src.triggerAttackRelease === 'function') {
+        src.triggerAttackRelease(note, clampedDur, time, velocity);
       }
       break;
     }
     case 'melody':
     case 'arp':
-      if (noteFromPattern)
-        (audio.source as Tone.PolySynth).triggerAttackRelease(noteFromPattern, duration, time, velocity);
+      (audio.source as Tone.PolySynth).triggerAttackRelease(note, clampedDur, time, velocity);
       break;
   }
 }
@@ -96,36 +95,25 @@ export function unregisterChannel(channelId: string) {
   audioNodes.delete(channelId);
 }
 
-/**
- * Hot-swap the instrument/variant for a channel.
- */
 export function updateChannelVariant(channelId: string, channel: Channel) {
   const node = audioNodes.get(channelId);
   if (!node) {
     audioNodes.set(channel.id, buildChain(channel));
     return;
   }
-
   node.source.dispose();
   for (const fx of node.effects) fx.dispose();
-
   const spec = getSpec(channel.type, channel.variant);
   const newSource = spec.create();
   const newEffects = spec.effects();
-
   try { node.gain.disconnect(); } catch {}
   try { node.pan.disconnect(); } catch {}
-
   let last: AudioNode = newSource;
-  for (const fx of newEffects) {
-    last.connect(fx);
-    last = fx;
-  }
+  for (const fx of newEffects) { last.connect(fx); last = fx; }
   last.connect(node.gain);
   node.gain.connect(node.pan);
   node.pan.connect(node.meter);
   node.meter.toDestination();
-
   node.source = newSource;
   node.effects = newEffects;
 }
@@ -153,38 +141,57 @@ export function playNoteOnChannel(channelId: string, note?: string | null, _velo
   if (!node) return;
   const channel = useStore.getState().channels.find(c => c.id === channelId);
   if (!channel || channel.muted) return;
-  trigger(channel, node, Tone.now(), note);
+  trigger(channel, node, Tone.now(), note || 'x', TICKS_PER_BEAT);
 }
 
-/** Returns current signal level in dB for a channel. -Infinity when silent, ~0 when hot. */
 export function getChannelLevel(channelId: string): number {
   const node = audioNodes.get(channelId);
   if (!node) return -Infinity;
   return node.meter.getValue() as number;
 }
 
-export function startSequencer(totalSteps: number, onStep: (step: number) => void) {
+/** Build a quick lookup: note.start -> notes[] for efficient tick scanning */
+function buildNoteIndex(channels: Channel[]): Map<number, { ch: Channel; note: Note }[]> {
+  const idx = new Map<number, { ch: Channel; note: Note }[]>();
+  for (const ch of channels) {
+    for (const n of ch.notes) {
+      if (!idx.has(n.start)) idx.set(n.start, []);
+      idx.get(n.start)!.push({ ch, note: n });
+    }
+  }
+  return idx;
+}
+
+function tickInterval(): Tone.Unit.Time {
+  // 1/8 of a quarter note = '4n / 8'  (Tone parses this)
+  return `4n / ${TICKS_PER_BEAT}` as Tone.Unit.Time;
+}
+
+export function startSequencer(ticks: number, onTick: (tick: number) => void) {
   if (loopIds.length > 0) return;
 
-  let currentStep = 0;
+  totalTicks = ticks;
+  currentTick = 0;
+  const state = useStore.getState();
+  const noteIdx = buildNoteIndex(state.channels);
 
   const id = Tone.Transport.scheduleRepeat((time) => {
-    const state = useStore.getState();
 
-    for (const channel of state.channels) {
-      if (channel.muted) continue;
-      const stepValue = channel.pattern[currentStep % channel.pattern.length];
-      if (stepValue === null || stepValue === undefined) continue;
 
-      const node = audioNodes.get(channel.id);
-      if (!node) continue;
-
-      trigger(channel, node, time, stepValue);
+    // Trigger notes that start on this tick
+    const starting = noteIdx.get(currentTick % totalTicks);
+    if (starting) {
+      for (const { ch, note } of starting) {
+        if (ch.muted) continue;
+        const node = audioNodes.get(ch.id);
+        if (!node) continue;
+        trigger(ch, node, time, note.note, note.duration);
+      }
     }
 
-    Tone.Draw.schedule(() => onStep(currentStep), time);
-    currentStep = (currentStep + 1) % totalSteps;
-  }, '16n');
+    Tone.Draw.schedule(() => onTick(currentTick), time);
+    currentTick = (currentTick + 1) % totalTicks;
+  }, tickInterval());
 
   loopIds.push(id);
   Tone.Transport.start();
@@ -195,6 +202,7 @@ export function stopSequencer() {
   loopIds.length = 0;
   Tone.Transport.stop();
   Tone.Transport.position = 0;
+  currentTick = 0;
 }
 
 export function setBpm(bpm: number) {

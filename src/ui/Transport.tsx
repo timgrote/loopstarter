@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { useStore } from '../state/store';
+import { useStore, TICKS_PER_BEAT } from '../state/store';
 import { PRESETS } from '../music/presets';
 import { SCALE_NAMES, SCALE_DISPLAY, getScaleNotes } from '../music/scales';
 import * as engine from '../audio/engine';
@@ -28,8 +29,6 @@ export const Transport: React.FC = () => {
   const randomizeKey = useStore((s) => s.randomizeKey);
   const setRecordingActive = useStore((s) => s.setRecordingActive);
 
-  const totalSteps = loopBars * 16;
-
   const handlePlayStop = async () => {
     if (isPlaying) {
       engine.stopSequencer();
@@ -45,8 +44,9 @@ export const Transport: React.FC = () => {
         engine.registerChannel(ch);
       }
 
-      engine.startSequencer(totalSteps, (step) => {
-        useStore.getState().setCurrentStep(step);
+      const totalTicks = useStore.getState().loopBars * 16 * TICKS_PER_BEAT;
+      engine.startSequencer(totalTicks, (tick) => {
+        useStore.getState().setCurrentTick(tick);
       });
       setIsPlaying(true);
     }
@@ -87,7 +87,7 @@ export const Transport: React.FC = () => {
             className={`${styles.playBtn} ${isPlaying ? styles.playing : ''}`}
             onClick={handlePlayStop}
           >
-            {isPlaying ? '⏹' : '▶'}
+            {isPlaying ? '' : '▶'}
           </button>
 
           <button

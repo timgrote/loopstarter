@@ -4,6 +4,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
   plugins: [react(), basicSsl()],
+  base: '/loopstarter/',
   server: {
     host: '0.0.0.0',
     port: 5173,

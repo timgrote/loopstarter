@@ -5,6 +5,21 @@ import { generateChannelPattern, type ChannelType } from '../music/patterns';
 import { getScaleNotes, randomFromScale } from '../music/scales';
 import { DEFAULT_VARIANT } from '../audio/sounds';
 
+// Helper: create a pseudo-preset object from current key settings
+function makeKeyPreset(root: string, scale: string, bassOctave: number, melodyOctave: number): Preset {
+  return {
+    name: '',
+    bpm: 120,
+    swing: 0,
+    root,
+    scale,
+    bassOctave,
+    melodyOctave,
+    drumDensity: { kick: 0.5, snare: 0.25, hat: 0.75 },
+    description: '',
+  };
+}
+
 export type { ChannelType };
 
 export interface Channel {
@@ -25,7 +40,10 @@ interface AppState {
   loopBars: number;
   isPlaying: boolean;
   currentStep: number;
-  presetKey: string;
+  root: string;
+  scale: string;
+  bassOctave: number;
+  melodyOctave: number;
   midiInputs: { id: string; name: string }[];
   midiDeviceId: string | null;
   liveChannelId: string | null;
@@ -44,7 +62,9 @@ interface AppState {
   closeFillMenu: () => void;
   clearPattern: (channelId: string) => void;
   fillEvery: (channelId: string, every: number) => void;
-  changeKey: (presetKey: string) => void;
+  changeRoot: (root: string) => void;
+  changeScale: (scale: string) => void;
+  applyPreset: (presetKey: string) => void;
   randomizeKey: () => void;
   setStep: (channelId: string, step: number, active: boolean) => void;
   setNoteAtStep: (channelId: string, step: number, note: string | null) => void;
@@ -95,15 +115,19 @@ function createChannelsFromPreset(preset: Preset, steps: number): Channel[] {
 
 const DEFAULT_PRESET = 'house';
 const DEFAULT_STEPS = 32; // 2 bars at 16ths
+const _defaultPreset = PRESETS[DEFAULT_PRESET];
 
 export const useStore = create<AppState>((set, get) => ({
-  channels: createChannelsFromPreset(PRESETS[DEFAULT_PRESET], DEFAULT_STEPS),
-  bpm: PRESETS[DEFAULT_PRESET].bpm,
-  swing: PRESETS[DEFAULT_PRESET].swing,
+  channels: createChannelsFromPreset(_defaultPreset, DEFAULT_STEPS),
+  bpm: _defaultPreset.bpm,
+  swing: _defaultPreset.swing,
   loopBars: 2,
   isPlaying: false,
   currentStep: 0,
-  presetKey: DEFAULT_PRESET,
+  root: _defaultPreset.root,
+  scale: _defaultPreset.scale,
+  bassOctave: _defaultPreset.bassOctave,
+  melodyOctave: _defaultPreset.melodyOctave,
   midiInputs: [],
   midiDeviceId: null,
   liveChannelId: null,
@@ -130,48 +154,90 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   fillEvery: (channelId, every) => {
-    set((state) => ({
-      channels: state.channels.map((ch) => {
-        if (ch.id !== channelId) return ch;
-        const isDrum = ch.type === 'kick' || ch.type === 'snare' || ch.type === 'hat';
-        const preset = PRESETS[state.presetKey];
-        const newPattern = ch.pattern.map((_, i) => {
-          if (i % every !== 0) return null;
-          if (isDrum) return 'x';
-          const octave = ch.type === 'bass' ? preset.bassOctave : preset.melodyOctave;
-          const octaves = ch.type === 'bass' ? 1 : 2;
-          const scaleNotes = getScaleNotes(preset.root, preset.scale, octave, octaves);
-          return randomFromScale(scaleNotes);
-        });
-        return { ...ch, pattern: newPattern };
-      }),
-    }));
+    set((state) => {
+      return {
+        channels: state.channels.map((ch) => {
+          if (ch.id !== channelId) return ch;
+          const isDrum = ch.type === 'kick' || ch.type === 'snare' || ch.type === 'hat';
+          const newPattern = ch.pattern.map((_, i) => {
+            if (i % every !== 0) return null;
+            if (isDrum) return 'x';
+            const octave = ch.type === 'bass' ? state.bassOctave : state.melodyOctave;
+            const octaves = ch.type === 'bass' ? 1 : 2;
+            const scaleNotes = getScaleNotes(state.root, state.scale, octave, octaves);
+            return randomFromScale(scaleNotes);
+          });
+          return { ...ch, pattern: newPattern };
+        }),
+      };
+    });
   },
 
-  changeKey: (presetKey) => {
+  changeRoot: (root) => {
+    const state = get();
+    const steps = state.loopBars * 16;
+    const keyPreset = makeKeyPreset(root, state.scale, state.bassOctave, state.melodyOctave);
+    set({
+      root,
+      channels: state.channels.map((ch) => {
+        const isDrum = ch.type === 'kick' || ch.type === 'snare' || ch.type === 'hat';
+        if (isDrum) return ch;
+        return { ...ch, pattern: generateChannelPattern(ch.type, keyPreset, steps) };
+      }),
+    });
+  },
+
+  changeScale: (scale) => {
+    const state = get();
+    const steps = state.loopBars * 16;
+    const keyPreset = makeKeyPreset(state.root, scale, state.bassOctave, state.melodyOctave);
+    set({
+      scale,
+      channels: state.channels.map((ch) => {
+        const isDrum = ch.type === 'kick' || ch.type === 'snare' || ch.type === 'hat';
+        if (isDrum) return ch;
+        return { ...ch, pattern: generateChannelPattern(ch.type, keyPreset, steps) };
+      }),
+    });
+  },
+
+  applyPreset: (presetKey) => {
     const preset = PRESETS[presetKey];
     if (!preset) return;
     const state = get();
     const steps = state.loopBars * 16;
     set({
-      presetKey,
+      root: preset.root,
+      scale: preset.scale,
+      bassOctave: preset.bassOctave,
+      melodyOctave: preset.melodyOctave,
       bpm: preset.bpm,
       swing: preset.swing,
       channels: state.channels.map((ch) => {
         const isDrum = ch.type === 'kick' || ch.type === 'snare' || ch.type === 'hat';
         if (isDrum) return ch;
-        return {
-          ...ch,
-          pattern: generateChannelPattern(ch.type, preset, steps),
-        };
+        return { ...ch, pattern: generateChannelPattern(ch.type, preset, steps) };
       }),
     });
   },
 
   randomizeKey: () => {
-    const keys = Object.keys(PRESETS);
-    const randomKey = keys[Math.floor(Math.random() * keys.length)];
-    get().changeKey(randomKey);
+    const roots = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const scales = Object.keys(PRESETS.house).includes('scale') ? ['minor', 'major', 'dorian', 'pentatonic', 'blues'] : ['minor'];
+    const randomRoot = roots[Math.floor(Math.random() * roots.length)];
+    const randomScale = scales[Math.floor(Math.random() * scales.length)];
+    const state = get();
+    const steps = state.loopBars * 16;
+    const keyPreset = makeKeyPreset(randomRoot, randomScale, state.bassOctave, state.melodyOctave);
+    set({
+      root: randomRoot,
+      scale: randomScale,
+      channels: state.channels.map((ch) => {
+        const isDrum = ch.type === 'kick' || ch.type === 'snare' || ch.type === 'hat';
+        if (isDrum) return ch;
+        return { ...ch, pattern: generateChannelPattern(ch.type, keyPreset, steps) };
+      }),
+    });
   },
 
   setStep: (channelId, step, active) => {
@@ -185,10 +251,9 @@ export const useStore = create<AppState>((set, get) => ({
         } else {
           // For pitched channels, toggling on gives a random scale note
           if (active && !newPattern[step]) {
-            const preset = PRESETS[state.presetKey];
-            const octave = type === 'bass' ? preset.bassOctave : preset.melodyOctave;
+            const octave = type === 'bass' ? state.bassOctave : state.melodyOctave;
             const octaves = type === 'bass' ? 1 : 2;
-            const scaleNotes = getScaleNotes(preset.root, preset.scale, octave, octaves);
+            const scaleNotes = getScaleNotes(state.root, state.scale, octave, octaves);
             newPattern[step] = randomFromScale(scaleNotes);
           } else if (!active) {
             newPattern[step] = null;
@@ -249,20 +314,22 @@ export const useStore = create<AppState>((set, get) => ({
   setCurrentStep: (step) => set({ currentStep: step }),
 
   regenerateAll: () => {
-    const preset = PRESETS[get().presetKey];
-    const steps = get().loopBars * 16;
-    set({ channels: createChannelsFromPreset(preset, steps) });
+    const state = get();
+    const steps = state.loopBars * 16;
+    const keyPreset = makeKeyPreset(state.root, state.scale, state.bassOctave, state.melodyOctave);
+    set({ channels: createChannelsFromPreset(keyPreset, steps) });
   },
 
   regenerateChannel: (channelId) => {
-    const preset = PRESETS[get().presetKey];
-    const steps = get().loopBars * 16;
+    const state = get();
+    const steps = state.loopBars * 16;
+    const keyPreset = makeKeyPreset(state.root, state.scale, state.bassOctave, state.melodyOctave);
     set((state) => ({
       channels: state.channels.map((ch) => {
         if (ch.id !== channelId) return ch;
         return {
           ...ch,
-          pattern: generateChannelPattern(ch.type, preset, steps),
+          pattern: generateChannelPattern(ch.type, keyPreset, steps),
         };
       }),
     }));

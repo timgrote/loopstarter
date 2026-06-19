@@ -8,6 +8,17 @@ export const SCALES: Record<string, number[]> = {
   blues: [0, 3, 5, 6, 7, 10],
 };
 
+const SCALE_LABELS: Record<string, string> = {
+  minor: 'Minor',
+  major: 'Major',
+  dorian: 'Dorian',
+  pentatonic: 'Pentatonic',
+  blues: 'Blues',
+};
+
+export const SCALE_NAMES = Object.keys(SCALES);
+export const SCALE_DISPLAY = SCALE_LABELS;
+
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 export function noteToMidi(noteName: string): number {

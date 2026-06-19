@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useStore } from '../state/store';
 import { PRESETS } from '../music/presets';
+import { SCALE_NAMES, SCALE_DISPLAY, getScaleNotes } from '../music/scales';
 import * as engine from '../audio/engine';
 import { MidiSelector } from './MidiSelector';
 import styles from './Transport.module.css';
+
+const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 export const Transport: React.FC = () => {
   const bpm = useStore((s) => s.bpm);
   const swing = useStore((s) => s.swing);
   const loopBars = useStore((s) => s.loopBars);
   const isPlaying = useStore((s) => s.isPlaying);
-  const presetKey = useStore((s) => s.presetKey);
+  const root = useStore((s) => s.root);
+  const scale = useStore((s) => s.scale);
   const recordingActive = useStore((s) => s.recordingActive);
   const liveChannelId = useStore((s) => s.liveChannelId);
 
@@ -18,13 +22,13 @@ export const Transport: React.FC = () => {
   const setSwing = useStore((s) => s.setSwing);
   const setLoopBars = useStore((s) => s.setLoopBars);
   const setIsPlaying = useStore((s) => s.setIsPlaying);
-  const changeKey = useStore((s) => s.changeKey);
+  const changeRoot = useStore((s) => s.changeRoot);
+  const changeScale = useStore((s) => s.changeScale);
+  const applyPreset = useStore((s) => s.applyPreset);
   const randomizeKey = useStore((s) => s.randomizeKey);
   const setRecordingActive = useStore((s) => s.setRecordingActive);
 
   const totalSteps = loopBars * 16;
-  const preset = PRESETS[presetKey];
-  const [showKeyPicker, setShowKeyPicker] = useState(false);
 
   const handlePlayStop = async () => {
     if (isPlaying) {
@@ -52,9 +56,16 @@ export const Transport: React.FC = () => {
     setRecordingActive(!recordingActive);
   };
 
-  const handleKeyChange = (key: string) => {
-    changeKey(key);
-    // Sync engine if playing
+  const handleRootChange = (newRoot: string) => {
+    changeRoot(newRoot);
+  };
+
+  const handleScaleChange = (newScale: string) => {
+    changeScale(newScale);
+  };
+
+  const handlePreset = (key: string) => {
+    applyPreset(key);
     if (isPlaying) {
       const preset = PRESETS[key];
       if (preset) {
@@ -62,7 +73,6 @@ export const Transport: React.FC = () => {
         engine.setSwing(preset.swing);
       }
     }
-    setShowKeyPicker(false);
   };
 
   return (
@@ -90,35 +100,40 @@ export const Transport: React.FC = () => {
           </button>
         </div>
 
-        <div className={styles.keyBlock}>
-          <button
-            className={styles.keyDisplay}
-            onClick={() => setShowKeyPicker(!showKeyPicker)}
-            title="Click to change key"
-          >
-            <span className={styles.keyRoot}>{preset?.root || 'C'}</span>
-            <span className={styles.keyScale}>{preset?.scale || 'minor'}</span>
-          </button>
+        <div className={styles.keyControls}>
+          <div className={styles.controlGroup}>
+            <label className={styles.controlLabel}>Key</label>
+            <select
+              className={styles.controlSelect}
+              value={root}
+              onChange={(e) => handleRootChange(e.target.value)}
+            >
+              {ROOTS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.controlGroup}>
+            <label className={styles.controlLabel}>Scale</label>
+            <select
+              className={styles.controlSelect}
+              value={scale}
+              onChange={(e) => handleScaleChange(e.target.value)}
+            >
+              {SCALE_NAMES.map((s) => (
+                <option key={s} value={s}>{SCALE_DISPLAY[s] || s}</option>
+              ))}
+            </select>
+          </div>
+
           <button
             className={styles.diceBtn}
             onClick={randomizeKey}
-            title="Randomize key"
+            title="Randomize key and scale"
           >
             🎲
           </button>
-          {showKeyPicker && (
-            <div className={styles.keyPicker}>
-              {Object.entries(PRESETS).map(([key, p]) => (
-                <button
-                  key={key}
-                  className={`${styles.keyOption} ${presetKey === key ? styles.active : ''}`}
-                  onClick={() => handleKeyChange(key)}
-                >
-                  {p.root} {p.scale}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className={styles.controls}>
@@ -171,12 +186,13 @@ export const Transport: React.FC = () => {
       <div className={styles.row}>
         <div className={styles.controls}>
           <div className={styles.controlGroup}>
-            <label className={styles.controlLabel}>Preset</label>
+            <label className={styles.controlLabel}>Genre</label>
             <select
               className={styles.controlSelect}
-              value={presetKey}
-              onChange={(e) => handleKeyChange(e.target.value)}
+              onChange={(e) => handlePreset(e.target.value)}
+              defaultValue=""
             >
+              <option value="" disabled>Apply preset…</option>
               {Object.entries(PRESETS).map(([key, preset]) => (
                 <option key={key} value={key}>
                   {preset.name}
@@ -191,8 +207,11 @@ export const Transport: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.presetDescription}>
-          {preset?.description}
+        <div className={styles.scaleNotes}>
+          <span className={styles.controlLabel}>Notes: </span>
+          <span className={styles.notes}>
+            {getScaleNotes(root, scale, 3, 1).join(' · ')}
+          </span>
         </div>
       </div>
     </div>

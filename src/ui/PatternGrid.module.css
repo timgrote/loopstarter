@@ -83,3 +83,35 @@
   pointer-events: none;
   user-select: none;
 }
+
+.fillZone {
+  min-width: 2rem;
+  flex-grow: 1;
+  height: 1.75rem;
+  cursor: context-menu;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  transition: background 0.1s;
+}
+
+.fillZone::after {
+  content: '+';
+  opacity: 0.4;
+}
+
+.fillZone:hover {
+  background: var(--surface-2);
+}
+
+.fillZone:hover::after {
+  opacity: 0.8;
+}
+
+.rulerFillZone {
+  min-width: 2rem;
+  flex-grow: 1;
+}

@@ -18,6 +18,7 @@ export const PatternGrid: React.FC<PatternGridProps> = ({
   const pattern = useStore((s) => s.channels.find((c) => c.id === channelId)?.pattern || []);
   const setStep = useStore((s) => s.setStep);
   const setNoteAtStep = useStore((s) => s.setNoteAtStep);
+  const openFillMenu = useStore((s) => s.openFillMenu);
   const isDrum = channelType === 'kick' || channelType === 'snare' || channelType === 'hat';
   const isPitched = !isDrum;
   const stepsPerBar = 16;
@@ -42,9 +43,10 @@ export const PatternGrid: React.FC<PatternGridProps> = ({
             </div>
           );
         })}
+        <div className={styles.rulerFillZone} />
       </div>
 
-      {/* Step cells */}
+      {/* Step cells + fill zone */}
       <div className={styles.steps}>
         {Array.from({ length: totalSteps }).map((_, i) => {
           const isActive = pattern[i] !== null && pattern[i] !== undefined;
@@ -76,6 +78,14 @@ export const PatternGrid: React.FC<PatternGridProps> = ({
             </div>
           );
         })}
+        <div
+          className={styles.fillZone}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            openFillMenu(e.clientX, e.clientY, channelId);
+          }}
+          title="Right-click for fill/clear options"
+        />
       </div>
     </div>
   );

@@ -31,6 +31,7 @@ interface AppState {
   liveChannelId: string | null;
   recordingActive: boolean;
   contextMenu: { x: number; y: number; channelId: string } | null;
+  fillMenu: { x: number; y: number; channelId: string } | null;
 
   // Actions
   setMidiInputs: (inputs: { id: string; name: string }[]) => void;
@@ -39,6 +40,10 @@ interface AppState {
   setRecordingActive: (active: boolean) => void;
   openContextMenu: (x: number, y: number, channelId: string) => void;
   closeContextMenu: () => void;
+  openFillMenu: (x: number, y: number, channelId: string) => void;
+  closeFillMenu: () => void;
+  clearPattern: (channelId: string) => void;
+  fillEvery: (channelId: string, every: number) => void;
   setStep: (channelId: string, step: number, active: boolean) => void;
   setNoteAtStep: (channelId: string, step: number, note: string | null) => void;
   setVolume: (channelId: string, volume: number) => void;
@@ -103,6 +108,7 @@ export const useStore = create<AppState>((set, get) => ({
   liveChannelId: null,
   recordingActive: false,
   contextMenu: null,
+  fillMenu: null,
 
   setMidiInputs: (inputs) => set({ midiInputs: inputs }),
   setMidiDevice: (deviceId) => set({ midiDeviceId: deviceId }),
@@ -110,6 +116,36 @@ export const useStore = create<AppState>((set, get) => ({
   setRecordingActive: (active) => set({ recordingActive: active }),
   openContextMenu: (x, y, channelId) => set({ contextMenu: { x, y, channelId } }),
   closeContextMenu: () => set({ contextMenu: null }),
+  openFillMenu: (x, y, channelId) => set({ fillMenu: { x, y, channelId } }),
+  closeFillMenu: () => set({ fillMenu: null }),
+
+  clearPattern: (channelId) => {
+    set((state) => ({
+      channels: state.channels.map((ch) => {
+        if (ch.id !== channelId) return ch;
+        return { ...ch, pattern: ch.pattern.map(() => null) };
+      }),
+    }));
+  },
+
+  fillEvery: (channelId, every) => {
+    set((state) => ({
+      channels: state.channels.map((ch) => {
+        if (ch.id !== channelId) return ch;
+        const isDrum = ch.type === 'kick' || ch.type === 'snare' || ch.type === 'hat';
+        const preset = PRESETS[state.presetKey];
+        const newPattern = ch.pattern.map((_, i) => {
+          if (i % every !== 0) return null;
+          if (isDrum) return 'x';
+          const octave = ch.type === 'bass' ? preset.bassOctave : preset.melodyOctave;
+          const octaves = ch.type === 'bass' ? 1 : 2;
+          const scaleNotes = getScaleNotes(preset.root, preset.scale, octave, octaves);
+          return randomFromScale(scaleNotes);
+        });
+        return { ...ch, pattern: newPattern };
+      }),
+    }));
+  },
 
   setStep: (channelId, step, active) => {
     set((state) => ({

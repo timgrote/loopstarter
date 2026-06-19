@@ -44,6 +44,8 @@ interface AppState {
   closeFillMenu: () => void;
   clearPattern: (channelId: string) => void;
   fillEvery: (channelId: string, every: number) => void;
+  changeKey: (presetKey: string) => void;
+  randomizeKey: () => void;
   setStep: (channelId: string, step: number, active: boolean) => void;
   setNoteAtStep: (channelId: string, step: number, note: string | null) => void;
   setVolume: (channelId: string, volume: number) => void;
@@ -55,7 +57,6 @@ interface AppState {
   setLoopBars: (bars: number) => void;
   setIsPlaying: (playing: boolean) => void;
   setCurrentStep: (step: number) => void;
-  loadPreset: (key: string) => void;
   regenerateAll: () => void;
   regenerateChannel: (channelId: string) => void;
 }
@@ -147,6 +148,32 @@ export const useStore = create<AppState>((set, get) => ({
     }));
   },
 
+  changeKey: (presetKey) => {
+    const preset = PRESETS[presetKey];
+    if (!preset) return;
+    const state = get();
+    const steps = state.loopBars * 16;
+    set({
+      presetKey,
+      bpm: preset.bpm,
+      swing: preset.swing,
+      channels: state.channels.map((ch) => {
+        const isDrum = ch.type === 'kick' || ch.type === 'snare' || ch.type === 'hat';
+        if (isDrum) return ch;
+        return {
+          ...ch,
+          pattern: generateChannelPattern(ch.type, preset, steps),
+        };
+      }),
+    });
+  },
+
+  randomizeKey: () => {
+    const keys = Object.keys(PRESETS);
+    const randomKey = keys[Math.floor(Math.random() * keys.length)];
+    get().changeKey(randomKey);
+  },
+
   setStep: (channelId, step, active) => {
     set((state) => ({
       channels: state.channels.map((ch) => {
@@ -220,18 +247,6 @@ export const useStore = create<AppState>((set, get) => ({
   setLoopBars: (bars) => set({ loopBars: bars }),
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   setCurrentStep: (step) => set({ currentStep: step }),
-
-  loadPreset: (key) => {
-    const preset = PRESETS[key];
-    if (!preset) return;
-    const steps = get().loopBars * 16;
-    set({
-      presetKey: key,
-      bpm: preset.bpm,
-      swing: preset.swing,
-      channels: createChannelsFromPreset(preset, steps),
-    });
-  },
 
   regenerateAll: () => {
     const preset = PRESETS[get().presetKey];

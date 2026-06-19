@@ -1,46 +1,8 @@
-
 .app {
   min-height: 100vh;
-  padding: 2rem;
+  padding: 1rem 2rem 2rem;
   max-width: 1400px;
   margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.keyDisplay {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
-  cursor: pointer;
-}
-
-.keyRoot {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1;
-}
-
-.keyScale {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .channels {

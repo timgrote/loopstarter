@@ -1,0 +1,29 @@
+
+.meter {
+  width: 6px;
+  height: 2rem;
+  background: var(--surface-2);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--green);
+  border-radius: 2px;
+  transition: height 0.05s linear;
+  min-height: 0;
+}
+
+.hot {
+  background: var(--orange);
+}
+
+.peak {
+  background: var(--red);
+}

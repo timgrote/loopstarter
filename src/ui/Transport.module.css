@@ -1,0 +1,149 @@
+
+.transport {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.transportMain {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.transportActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.playBtn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.playBtn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.playBtn.playing {
+  background: var(--red);
+  border-color: var(--red);
+  color: white;
+}
+
+.recBtn {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border-radius: 0.25rem;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.recBtn:hover:not(:disabled) {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+}
+
+.recBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.recBtn.recording {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+  animation: recPulse 1s ease-in-out infinite;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.controlLabel {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.controlInput {
+  width: 4.5rem;
+  padding: 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.controlInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.controlSelect {
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.controlSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.regenBtn {
+  padding: 0.5rem 0.875rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.regenBtn:hover {
+  background: var(--border);
+}
+
+.presetDescription {
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  font-style: italic;
+}

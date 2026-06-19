@@ -1,0 +1,27 @@
+
+.knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: ns-resize;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.label {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.value {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 2rem;
+  text-align: center;
+}

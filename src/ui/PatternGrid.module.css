@@ -1,0 +1,85 @@
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ruler {
+  display: flex;
+  gap: 2px;
+  height: 1rem;
+}
+
+.rulerCell {
+  min-width: 1.125rem;
+  width: 1.125rem;
+  flex-shrink: 0;
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1rem;
+}
+
+.rulerCell.rulerBar {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.steps {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.cell {
+  min-width: 1.125rem;
+  width: 1.125rem;
+  height: 1.75rem;
+  background: var(--surface-2);
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.08s;
+  flex-shrink: 0;
+}
+
+.cell:hover {
+  background: color-mix(in srgb, var(--border) 70%, white);
+}
+
+.cell.active {
+  background: var(--accent);
+}
+
+/* Bar start — thick left border with color */
+.cell.barStart {
+  border-left: 2px solid var(--border);
+  margin-left: 2px;
+}
+
+/* Beat start — subtle left line */
+.cell.beat {
+  border-left: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+.cell.current {
+  background: color-mix(in srgb, var(--border) 50%, white);
+}
+
+.cell.active.current {
+  background: color-mix(in srgb, var(--accent) 70%, white);
+}
+
+.noteLabel {
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+}

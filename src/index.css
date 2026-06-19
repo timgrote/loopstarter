@@ -1,0 +1,101 @@
+
+:root {
+  /* Colors */
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface-2: #252525;
+  --border: #333;
+  --text: #e5e5e5;
+  --text-dim: #888;
+
+  /* Brand */
+  --accent: #3b82f6;
+  --accent-glow: #60a5fa;
+  --red: #ef4444;
+  --orange: #f97316;
+  --yellow: #eab308;
+  --green: #22c55e;
+  --purple: #a855f7;
+  --cyan: #06b6d4;
+
+  /* Geometry */
+  --radius: 6px;
+
+  /* Type */
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ===== Global resets ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+
+/* ===== Shared component tokens ===== */
+
+/* Buttons — any button in the app */
+button {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+}
+
+/* Form controls — any input/select */
+input,
+select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ===== Shared animations ===== */
+
+@keyframes recPulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
